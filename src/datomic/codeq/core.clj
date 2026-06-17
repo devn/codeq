@@ -11,7 +11,7 @@
             [clojure.java.io :as io]
             [clojure.set]
             [clojure.string :as string]
-            [datomic.codeq.util :refer [cond-> index->id-fn tempid?]]
+            [datomic.codeq.util :refer [index->id-fn tempid?]]
             [datomic.codeq.analyzer :as az]
             [datomic.codeq.analyzers.clj])
   (:import java.util.Date)
@@ -543,7 +543,7 @@
 
 (comment
 (def uri "datomic:mem://git")
-;;(def uri "datomic:free://localhost:4334/git")
+;;(def uri "datomic:dev://localhost:4334/git")
 (datomic.codeq.core/main uri "c3bd979cfe65da35253b25cb62aad4271430405c")
 (datomic.codeq.core/main uri  "20f8db11804afc8c5a1752257d5fdfcc2d131d08")
 (datomic.codeq.core/main uri)
