@@ -53,3 +53,26 @@
       (is (= ["demo.core/greet" "demo.core/stable"] (q/find-defs db "demo"))))
     (testing "no match -> empty"
       (is (= [] (q/find-defs db "nonexistent"))))))
+
+(deftest fn-history-orders-versions-topologically
+  (let [db   (analyzed-db (build-repo))
+        hist (q/fn-history db "demo.core/greet")]
+    (testing "one entry per distinct code version, oldest first"
+      (is (= 2 (count hist)))
+      (is (= ["init" "change greet"] (mapv :message hist)))
+      (is (re-find #"v1" (:code (first hist))))
+      (is (re-find #"v2" (:code (second hist)))))
+    (testing "version maps carry the expected keys"
+      (is (= #{:sha :code :commit :date :author :message :defop}
+             (set (keys (first hist)))))
+      (is (= "defn" (:defop (first hist))))
+      (is (= "ada@example.com" (:author (first hist)))))))
+
+(deftest fn-history-collapses-unchanged-versions
+  (let [db (analyzed-db (build-repo))]
+    (testing "a def unchanged across commits is a single version"
+      (let [hist (q/fn-history db "demo.core/stable")]
+        (is (= 1 (count hist)))
+        (is (= "init" (:message (first hist))))))
+    (testing "unknown name -> empty"
+      (is (= [] (q/fn-history db "demo.core/nope"))))))

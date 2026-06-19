@@ -30,3 +30,41 @@
          distinct
          sort
          vec)))
+
+(defn fn-history
+  "Evolution of a fully-qualified def name as version snapshots, oldest -> newest
+   in topological (import) order, one map per distinct :code/sha. The introducing
+   commit/tx for a version is the earliest among the codeqs carrying that
+   :code/sha. Unknown name -> []."
+  [db qualified-name]
+  (->> (d/q '[:find ?sha ?text ?csha ?inst ?email ?msg ?defop ?tx
+              :in $ ?name
+              :where
+              [?nm :code/name ?name]
+              [?cq :clj/def ?nm]
+              [?cq :codeq/code ?code]
+              [?code :code/sha ?sha]
+              [?code :code/text ?text]
+              [?cq :codeq/file ?blob]
+              [?blob :git/sha _ ?tx]
+              [?tx :tx/commit ?commit]
+              [?commit :git/sha ?csha]
+              [?commit :commit/authoredAt ?inst]
+              [?commit :commit/author ?auth]
+              [?auth :email/address ?email]
+              [(get-else $ ?commit :commit/message "") ?msg]
+              [?cq :clj/defop ?defop]]
+            db qualified-name)
+       (group-by first)                              ;; group rows by ?sha
+       (map (fn [[sha rows]]
+              (let [e (apply min-key #(nth % 7) rows)] ;; earliest ?tx for this version
+                {:sha sha
+                 :code (nth e 1)
+                 :commit (nth e 2)
+                 :date (nth e 3)
+                 :author (nth e 4)
+                 :message (nth e 5)
+                 :defop (nth e 6)
+                 ::tx (nth e 7)})))
+       (sort-by ::tx)
+       (mapv #(dissoc % ::tx))))
